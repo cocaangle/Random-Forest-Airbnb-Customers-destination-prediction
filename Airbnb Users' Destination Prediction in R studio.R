@@ -68,7 +68,7 @@ users$gender=ifelse(users$id%in%female,"FEMALE",
                     ifelse(users$id%in%male,"MALE",as.character(users$gender)))
 users%>%filter(country=="Outside US")%>%count(gender)
 summary(users$country)
-#1.2.3 create a new language including en and non¡ªen
+#1.2.3 create a new language including en and nonÂ¡Âªen
 summary(users$language)
 users$lang=users$language
 users$lang=factor(ifelse(users$language=="en","en","non-en"))
@@ -193,74 +193,9 @@ head(users)
 #from 10-13,the people who made first booking was concentrated from month 10-12 and month 7-9;
 #while in year of 14 and 15, this has been changed to month 3-5, and the pct for 10-12 is almost 0.
 
-#III Modeling
-#3.1 Logistic Regression
+#III Modeling on Random Forest
 
-data=read.csv("cleandatausers.csv")
-
-da=data.frame(data)
-colSums(is.na(da))
-summary(da)
-#filter columns
-library(dplyr)
-data1=select(da,gender:dfb_month)
-str(data)
-del_col=c("age_dis","dfb_year","dfb_month","dfb_date","affiliate_prov","lang","country")
-data1=data1[,-which(names(data1)%in%del_col)]
-names(data1)
-#check whether there is any missing or NA values
-colSums(is.na(data1))
-attach(data1)
-str(data1);summary(data1)
-#convert data format of each column
-data1$signup_flow=as.factor(data1$signup_flow)
-data1$doc_date=as.factor(data1$doc_date)
-data1$doc_month=as.factor(data1$doc_month)
-data1$doc_year=as.factor(data1$doc_year)
-data1$signup_method=as.factor(data1$signup_method)
-data1$age=as.numeric(data1$age)
-str(data1)
-colSums(is.na(data1))
-data1$countrylg=factor(ifelse(data1$country=="US","US","Outside US"))
-data1$countrymodel=ifelse(data1$countrylg=="US",1,0)
-unique(data1$countrymodel)
-prop.table(table(data1$countrymodel))
-str(data1)
-data1$countrylg=NULL
-str(data1)
-data1$countrymodel=as.factor(data1$countrymodel)
-str(data1)
-#modeling
-fit=glm(countrymodel~.,data=data1, family="binomial")
-summary(fit)
-pred_prob = predict(fit, newdata = data1, type = "response")
-pred_prob
-pred_US = ifelse(pred_prob > 0.5,1,0)
-table = table(pred_US, data1$countrymodel) #confusion matrix
-table
-sum(diag(table))/sum(table) #Accurancy
-rate = 1 - sum(diag(table))/sum(table)
-rate
-
-#Load test data set
-test=read.csv("test_users.csv")
-library(dplyr)
-test1=test%>%select(-id,-timestamp_first_active,-date_account_created,-date_first_booking,-timestamp_first_active)
-library(stringr)
-test_doc=as.data.frame(str_split_fixed(test$date_account_created,"/",3))
-test1$doc=as.data.frame(lapply(test_doc,as.factor))
-test1["doc_year"]=test_doc[,3]
-test1["doc_month"]=test_doc[,1]
-test1["doc_date"]=test_doc[,2]
-test1$doc=NULL
-
-test1$age=as.numeric(test1$age)
-test1$signup_flow=as.factor(test1$signup_flow)
-test1$country_destination=as.factor(test1$country_destination)
-pred_prob=predict(fit,newdata=test1,type="class")
-table1=table(pred,test1$country_destination)
-1-sum(diag(table1))/sum(table1)
-#3.2 Random forest
+#3.1 Data Processing for Modeling
 
 data=read.csv("cleandatausers.csv")
 da=data.frame(data)
@@ -325,8 +260,9 @@ test1$age=as.numeric(test1$age)
 test1$signup_flow=as.factor(test1$signup_flow)
 test1$country_destination=as.factor(test1$country_destination)
 pred_prob=predict(rf,newdata=test1,type="class")
-table1=table(pred,test1$country_destination)
-1-sum(diag(table1))/sum(table1)
 
-#the misclassification rate of logistic regression is smaller than that of random forest, so using logistic
-#model for this data is a good choice.
+head(data1);head(test1)
+str(data1);str(test1)
+
+table1=table(pred,test1$country_destination)
+
